@@ -1,0 +1,54 @@
+name = "Wiflix"
+baseUrl = "http://wiflix.promo"
+language = "fr"
+
+import org.jsoup.Jsoup
+
+// Classe représentant une vidéo
+data class Video(val url: String, val quality: String)
+
+// Classe représentant un résultat de recherche
+data class SearchResult(val title: String, val url: String, val thumbnail: String)
+
+// Fonction pour extraire la liste des vidéos d'une page
+fun getVideoList(url: String): List<Video> {
+    val document = Jsoup.connect(url).get()
+    val videos = mutableListOf<Video>()
+
+    // Sélectionnez les éléments HTML contenant les sources vidéo
+    document.select("source").forEach {
+        val videoUrl = it.attr("src")
+        val videoQuality = it.attr("label") ?: "Unknown"
+        videos.add(Video(videoUrl, videoQuality))
+    }
+
+    return videos
+}
+
+// Fonction pour rechercher des vidéos sur le site
+fun search(query: String): List<SearchResult> {
+    val searchUrl = "$baseUrl/index.php?do=search&subaction=search&story=$query"
+    val document = Jsoup.connect(searchUrl).get()
+    val results = mutableListOf<SearchResult>()
+
+    // Sélectionnez les éléments HTML des résultats de recherche
+    document.select(".shortpost").forEach {
+        val title = it.select(".short-title a").text()
+        val url = it.select(".short-title a").attr("href")
+        val thumbnail = it.select(".short-img img").attr("src")
+        results.add(SearchResult(title, url, thumbnail))
+    }
+
+    return results
+}
+
+// Exemple d'utilisation
+val query = "Matrix"
+val searchResults = search(query)
+searchResults.forEach {
+    println("Title: ${it.title}, URL: ${it.url}, Thumbnail: ${it.thumbnail}")
+    val videoList = getVideoList(it.url)
+    videoList.forEach { video ->
+        println("Video URL: ${video.url}, Quality: ${video.quality}")
+    }
+}
